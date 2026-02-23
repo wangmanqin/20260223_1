@@ -109,9 +109,17 @@ export default function DrivePage() {
       setUploadProgress(0)
       const supabase = createClient()
 
+      // 检查用户会话
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        throw new Error('用户未登录')
+      }
+
       // 处理文件名
       const sanitizedFileName = sanitizeFileName(file.name)
+      console.log('处理后的文件名:', sanitizedFileName)
 
+      // 尝试上传文件
       const { error } = await supabase.storage
         .from('temp_1')
         .upload(sanitizedFileName, file, {
@@ -123,13 +131,21 @@ export default function DrivePage() {
         })
 
       if (error) {
+        console.error('Storage 错误详情:', error)
         throw error
       }
 
+      console.log('文件上传成功:', sanitizedFileName)
+
       // 重新获取文件列表
-      const { data: updatedFiles } = await supabase.storage
+      const { data: updatedFiles, error: listError } = await supabase.storage
         .from('temp_1')
         .list()
+
+      if (listError) {
+        console.error('获取文件列表错误:', listError)
+        throw listError
+      }
 
       // 获取每个文件的URL
       const filesWithUrl = await Promise.all(
@@ -149,9 +165,14 @@ export default function DrivePage() {
       )
 
       setFiles(filesWithUrl)
+      setError(null)
     } catch (err: any) {
+      console.error('上传过程完整错误:', err)
       setError('文件上传失败: ' + err.message)
-      console.error('Error uploading file:', err)
+      // 提供更详细的错误信息
+      if (err.message.includes('row-level security policy')) {
+        setError('文件上传失败: 没有权限上传文件，请检查 Supabase Storage 的安全策略设置')
+      }
     } finally {
       setUploading(false)
       setUploadProgress(0)
