@@ -35,24 +35,30 @@ function TodoList({ initialTodos }: TodoListProps) {
   // 乐观更新 - 切换待办状态
   const [optimisticTodos, setOptimisticTodos] = useOptimistic(
     todos,
-    (state, id: string, completed: boolean) => {
-      return state.map(todo =>
-        todo.id === id ? { ...todo, completed: !completed } : todo
-      )
+    (state, action: { type: string; id: string; completed: boolean }) => {
+      if (action.type === 'toggle') {
+        return state.map(todo =>
+          todo.id === action.id ? { ...todo, completed: !action.completed } : todo
+        )
+      }
+      return state
     }
   )
 
   // 乐观更新 - 删除待办
   const [optimisticTodosDelete, setOptimisticTodosDelete] = useOptimistic(
     todos,
-    (state, id: string) => {
-      return state.filter(todo => todo.id !== id)
+    (state, action: { type: string; id: string }) => {
+      if (action.type === 'delete') {
+        return state.filter(todo => todo.id !== action.id)
+      }
+      return state
     }
   )
 
   const handleToggle = async (id: string, completed: boolean) => {
     // 立即更新UI
-    setOptimisticTodos(id, completed)
+    setOptimisticTodos({ type: 'toggle', id, completed })
     
     try {
       // 发送请求到服务器
@@ -69,7 +75,7 @@ function TodoList({ initialTodos }: TodoListProps) {
 
   const handleDelete = async (id: string) => {
     // 立即更新UI
-    setOptimisticTodosDelete(id)
+    setOptimisticTodosDelete({ type: 'delete', id })
     
     try {
       // 发送请求到服务器

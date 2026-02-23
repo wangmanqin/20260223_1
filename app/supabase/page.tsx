@@ -16,46 +16,7 @@ export interface Todo {
   updated_at: string
 }
 
-// 服务器操作
-export async function addTodo(formData: FormData) {
-  const title = formData.get('title') as string
-  if (!title.trim()) return
 
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  await supabase.from('todos').insert({ title })
-}
-
-export async function toggleTodoAction(formData: FormData) {
-  const id = formData.get('id') as string
-  const completed = formData.get('completed') === 'true'
-
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  await supabase.from('todos').update({ completed: !completed }).eq('id', id)
-}
-
-export async function deleteTodoAction(formData: FormData) {
-  const id = formData.get('id') as string
-
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  await supabase.from('todos').delete().eq('id', id)
-}
-
-export async function addSampleTodos() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  await supabase.from('todos').insert([
-    { title: '完成项目集成' },
-    { title: '测试待办应用' },
-    { title: '优化用户体验' }
-  ])
-}
 
 export default function TodoPage() {
   const [todos, setTodos] = useState<Todo[]>([])
@@ -66,10 +27,10 @@ export default function TodoPage() {
     const fetchTodos = async () => {
       try {
         setIsLoading(true)
-        const supabase = createClient()
-        
-        // 尝试获取待办事项
-        let { data: fetchedTodos, error: fetchError } = await supabase.from('todos').select().order('created_at', { ascending: false })
+        const supabase = await createClient()
+      
+      // 尝试获取待办事项
+      let { data: fetchedTodos, error: fetchError } = await supabase.from('todos').select().order('created_at', { ascending: false })
 
         if (fetchError) {
           setError(fetchError.message)
@@ -103,7 +64,7 @@ export default function TodoPage() {
   }, [])
 
   // 处理添加待办
-  const handleAddTodo = async (e: React.FormEvent) => {
+  const handleAddTodo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
     const title = formData.get('title') as string
@@ -111,7 +72,7 @@ export default function TodoPage() {
     if (!title.trim()) return
 
     try {
-      const supabase = createClient()
+      const supabase = await createClient()
       await supabase.from('todos').insert({ title })
       
       // 重新获取待办事项
@@ -119,7 +80,7 @@ export default function TodoPage() {
       setTodos(newTodos || [])
       
       // 清空表单
-      (e.currentTarget as HTMLFormElement).reset()
+      e.currentTarget.reset()
     } catch (err) {
       setError('添加待办事项失败')
       console.error('Error adding todo:', err)

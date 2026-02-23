@@ -42,12 +42,12 @@ export default function DrivePage() {
               .getPublicUrl(file.name)
 
             return {
-              id: file.id || file.name,
-              name: file.name,
-              size: file.size,
-              url: url.publicUrl,
-              created_at: file.created_at || new Date().toISOString()
-            }
+            id: file.id || file.name,
+            name: file.name,
+            size: file.metadata?.size || 0,
+            url: url.publicUrl,
+            created_at: file.created_at || new Date().toISOString()
+          }
           })
         )
 
@@ -120,14 +120,11 @@ export default function DrivePage() {
       console.log('处理后的文件名:', sanitizedFileName)
 
       // 尝试上传文件
-      const { error } = await supabase.storage
+      const { error, data } = await supabase.storage
         .from('temp_1')
         .upload(sanitizedFileName, file, {
           cacheControl: '3600',
-          upsert: true,
-          onUploadProgress: (progress) => {
-            setUploadProgress(Math.round((progress.loaded / progress.total) * 100))
-          }
+          upsert: true
         })
 
       if (error) {
@@ -157,7 +154,7 @@ export default function DrivePage() {
           return {
             id: file.id || file.name,
             name: file.name,
-            size: file.size,
+            size: file.metadata?.size || 0,
             url: url.publicUrl,
             created_at: file.created_at || new Date().toISOString()
           }
@@ -175,7 +172,6 @@ export default function DrivePage() {
       }
     } finally {
       setUploading(false)
-      setUploadProgress(0)
       // 清空文件输入
       e.target.value = ''
     }

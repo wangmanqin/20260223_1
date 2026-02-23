@@ -3,15 +3,18 @@ import { createClient } from '@/utils/supabase/api'
 
 export async function POST(request: NextRequest) {
   try {
-    const { id } = await request.json()
-    
+    const { title } = await request.json()
     const { supabase, response } = createClient(request)
 
-    await supabase.from('todos').delete().eq('id', id)
+    const { error } = await supabase.from('todos').insert({ title })
+
+    if (error) {
+      throw error
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Error deleting todo:', error)
-    return NextResponse.json({ success: false, error: 'Failed to delete todo' }, { status: 500 })
+    console.error('Error adding todo:', error)
+    return NextResponse.json({ success: false, error: 'Failed to add todo' }, { status: 500 })
   }
 }
