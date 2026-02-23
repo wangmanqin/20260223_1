@@ -63,6 +63,42 @@ export default function DrivePage() {
     fetchFiles()
   }, [])
 
+  // 处理文件名，确保符合 Supabase Storage 的要求
+  const sanitizeFileName = (fileName: string): string => {
+    // 移除或替换不允许的字符，只保留安全字符
+    // 安全字符：字母、数字、普通连字符、下划线、点
+    let sanitized = fileName
+      // 替换所有非安全字符为连字符
+      .replace(/[^a-zA-Z0-9\-_.]/g, '-')
+      // 替换特殊连字符为普通连字符
+      .replace(/[‐‑–—]/g, '-')
+      // 替换多个连字符为单个
+      .replace(/-+/g, '-')
+      // 移除首尾连字符
+      .replace(/^-|-$/g, '')
+      // 移除文件名开头的点
+      .replace(/^\./, '')
+    
+    // 确保文件名长度合理
+    if (sanitized.length > 200) {
+      const extIndex = sanitized.lastIndexOf('.')
+      if (extIndex > 0) {
+        const ext = sanitized.substring(extIndex)
+        const name = sanitized.substring(0, 200 - ext.length)
+        sanitized = name + ext
+      } else {
+        sanitized = sanitized.substring(0, 200)
+      }
+    }
+    
+    // 确保文件名不为空
+    if (!sanitized) {
+      sanitized = 'file_' + Date.now()
+    }
+    
+    return sanitized
+  }
+
   // 处理文件上传
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -73,9 +109,12 @@ export default function DrivePage() {
       setUploadProgress(0)
       const supabase = createClient()
 
+      // 处理文件名
+      const sanitizedFileName = sanitizeFileName(file.name)
+
       const { error } = await supabase.storage
         .from('temp_1')
-        .upload(file.name, file, {
+        .upload(sanitizedFileName, file, {
           cacheControl: '3600',
           upsert: true,
           onUploadProgress: (progress) => {
